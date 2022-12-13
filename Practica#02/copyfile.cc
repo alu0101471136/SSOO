@@ -4,7 +4,7 @@
   * Grado en Ingeniería Informática
   * Computabilidad y Algoritmia 2022-2023
   *
-  * @file main_programm.cc
+  * @file copyfile.cc
   * @author Raúl Álvarez Pérez alu0101471136@ull.edu.es
   * @date Dec 12 2022
   * @brief Programa llamado copyfile, muy similar al conocido comando cp
@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
     std::string tercer_argumento{argv[3]};
     copy_file(segundo_argumento, tercer_argumento, true);
   } else {
-    copy_file(primer_argumento, segundo_argumento);
+    copy_file(primer_argumento, segundo_argumento, false);
   }
   return 0;
 }

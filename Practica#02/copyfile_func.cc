@@ -13,8 +13,18 @@
 
 #include <iostream>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <limits.h>
+#include <libgen.h>
+#include <array>
+#include <assert.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <vector>
+#include <utime.h>
 #include "tools.h"
-/*
+/**
  * @name: Usage
  * @brief: Controlar el uso del programa para que funcione correctamente
  * @param: numero_parametros: el numero de parametros pasados al ejecutar el programa, 
@@ -32,20 +42,47 @@ void Usage(int numero_parametros, std::string& primer_argumento) {
   }
   }
   if (numero_parametros != 3) {
-    std::cout << "Modo de Uso: ./p08_grammar2CNF input.gra output.gra" << std::endl;
-    std::cout << "Pruebe ./p08_grammar2CNF --help para más información" << std::endl;
+    std::cout << "Modo de Uso: ./copyfile ruta/de/origen ruta/de/destino" << std::endl;
+    std::cout << "Pruebe ./copyfile --help para más información" << std::endl;
     exit(EXIT_SUCCESS);
   }
 }
 
 std::error_code copy_file(const std::string& src_path, const std::string& dst_path, bool preserve_all=false) {
   std::error_code error;
+  std::string copia_src_path{src_path};
+  std::string copia_dst_path{dst_path};
   struct stat comprobacion;
-  if (stat(src_path.c_str(), &comprobacion)) {
-
+  if (stat(src_path.c_str(), &comprobacion) == -1 && S_ISREG(comprobacion.st_mode) == 0) {
+    return std::error_code(errno, std::system_category());
   }
+  if (stat(dst_path.c_str(), &comprobacion)) {
+    assert(src_path != dst_path);
+    if (S_ISDIR(comprobacion.st_mode)) {
+      char* src_file = const_cast<char*>(src_path.c_str());
+      copia_dst_path.append(basename(src_file));
+    }
+  }
+  open(src_path.c_str(), O_RDONLY);
+  open(copia_dst_path.c_str(), O_CREAT | O_WRONLY, 0666);
+  if (stat(copia_dst_path.c_str(), &comprobacion)) {
+    open(copia_dst_path.c_str(), O_TRUNC);
+  } else {
+    open(copia_dst_path.c_str(), O_CREAT, 0666);
+  }
+  ssize_t datos;
+  while (datos != 0) {
+    int fd;
+    datos = read(fd, copia_dst_path, );
+  }
+  if (preserve_all) {
+    chmod(copia_dst_path.c_str(), comprobacion.st_mode);
+    chown(copia_dst_path.c_str(), );
+    const struct utimbuf *buf_time;
+    utime(copia_dst_path.c_str(), buf_time);
+  } 
 }
 
 std::error_code move_file(const std::string& src_path, const std::string& dst_path) {
-
+  return std::error_code(errno, std::system_category());
 }
