@@ -6,7 +6,7 @@
 
 void Usage(int numero_parametros, std::string& primer_argumento);
 const std::string kHelpText{"Si no contiene opciones el programa se ejecuta asi: ./copyfile ruta/de/origen ruta/de/destino.\nSi contiene opciones se podran usar -m y .a"};
-void copy_file(const std::string& src_path, const std::string& dst_path, bool preserve_all=false);
-void move_file(const std::string& src_path, const std::string& dst_path);
+std::error_code copy_file(const std::string& src_path, const std::string& dst_path, bool preserve_all=false);
+std::error_code move_file(const std::string& src_path, const std::string& dst_path);
 
 #endif

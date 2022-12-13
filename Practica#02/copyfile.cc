@@ -4,7 +4,7 @@
   * Grado en Ingeniería Informática
   * Computabilidad y Algoritmia 2022-2023
   *
-  * @file copyfile.cc
+  * @file main_programm.cc
   * @author Raúl Álvarez Pérez alu0101471136@ull.edu.es
   * @date Dec 12 2022
   * @brief Programa llamado copyfile, muy similar al conocido comando cp
@@ -12,26 +12,22 @@
   */
 
 #include <iostream>
+#include <string>
 #include "tools.h"
-/*
- * @name: Usage
- * @brief: Controlar el uso del programa para que funcione correctamente
- * @param: numero_parametros: el numero de parametros pasados al ejecutar el programa, 
- *         primer_argumento: parametro en el que estara '--help'
- */
-void Usage(int numero_parametros, std::string& primer_argumento) {
-  if (primer_argumento == "--help" ) {
-    std::cout << kHelpText << std::endl;
-    exit(EXIT_SUCCESS); 
+
+int main(int argc, char* argv[]) {
+  int numero_argumentos{argc};
+  std::string primer_argumento{argv[1]};
+  Usage(numero_argumentos, primer_argumento);
+  std::string segundo_argumento{argv[2]};
+  if (primer_argumento == "-m") {
+    std::string tercer_argumento{argv[3]};
+    move_file(segundo_argumento, tercer_argumento);
+  } else if (primer_argumento == "-a") {
+    std::string tercer_argumento{argv[3]};
+    copy_file(segundo_argumento, tercer_argumento, true);
+  } else {
+    copy_file(primer_argumento, segundo_argumento);
   }
-  if (numero_parametros != 3) {
-    std::cout << "Modo de Uso: ./p08_grammar2CNF input.gra output.gra" << std::endl;
-    std::cout << "Pruebe ./p08_grammar2CNF --help para más información" << std::endl;
-    exit(EXIT_SUCCESS);
-  }
+  return 0;
 }
-
-void copy_file(const std::string& src_path, const std::string& dst_path, bool preserve_all=false);
-
-
-void move_file(const std::string& src_path, const std::string& dst_path);
