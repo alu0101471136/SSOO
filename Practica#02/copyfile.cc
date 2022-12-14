@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
     std::string tercer_argumento{argv[3]};
     copy_file(segundo_argumento, tercer_argumento, true);
   } else {
-    copy_file(primer_argumento, segundo_argumento, false);
+    copy_file(primer_argumento, segundo_argumento);
   }
   return 0;
 }

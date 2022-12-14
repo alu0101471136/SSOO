@@ -62,17 +62,20 @@ std::vector<uint8_t> ReadFile(const int fd) {
     buffer.resize(bytes_leidos);
     return buffer;
   } catch (const std::exception& error) {
-    std::cerr << "Error Copying file" << std::endl;
+    std::cerr << "Error Reading file" << std::endl;
     throw error;
   }
 }
 
-std::vector<uint8_t> WriteFile(int fd, std::vector<uint8_t>& buffer) {
+std::vector<uint8_t> WriteFile(const int fd, std::vector<uint8_t> buffer) {
   try {
-    write(fd, buffer.data(), buffer.size());
+    ssize_t bytes_escritos = write(fd, buffer.data(), buffer.size());
+    if (bytes_escritos < 0) {
+      throw std::system_error(errno, std::system_category());
+    }
     return buffer;
   } catch (const std::exception& error) {
-    std::cerr << "Error Copying file" << std::endl;
+    std::cerr << "Error Writing file" << std::endl;
     throw error;
   }
 }
@@ -86,7 +89,7 @@ void copy_file(const std::string& src_path, const std::string& dst_path, bool pr
       throw std::runtime_error("The source path doesn't exist or the source file isn't a regular file.");
     }
     struct stat dst_comprobacion;
-    if (stat(dst_path.c_str(), &dst_comprobacion)) {
+    if (stat(dst_path.c_str(), &dst_comprobacion) == 0) {
       assert(src_path != dst_path);
       if (S_ISDIR(dst_comprobacion.st_mode)) {
         char* src_file = const_cast<char*>(src_path.c_str());
@@ -99,14 +102,14 @@ void copy_file(const std::string& src_path, const std::string& dst_path, bool pr
     });
     struct stat dst_copia_comprobacion;
     int fd_dst;
-    if (stat(copia_dst_path.c_str(), &dst_copia_comprobacion)) {
+    if (stat(copia_dst_path.c_str(), &dst_copia_comprobacion) == 0) {
       fd_dst = open(copia_dst_path.c_str(), O_WRONLY | O_TRUNC);
     scope::scope_exit dst_exit([fd_dst](){
       close(fd_dst);
     });
     } else {
-      fd_dst = open(copia_dst_path.c_str(), O_CREAT | O_WRONLY, 0666);
-      scope::scope_exit dst_exit([fd_dst](){
+      fd_dst = open(copia_dst_path.c_str(), O_WRONLY | O_CREAT, 0666);
+    scope::scope_exit dst_exit([fd_dst](){
       close(fd_dst);
     });
     }
