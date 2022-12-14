@@ -10,6 +10,8 @@
   * @brief Programa llamado copyfile, muy similar al conocido comando cp
   * @bug No existen fallos conocidos
   */
+#ifndef COPY_H
+#define COPY_H
 
 #include <iostream>
 #include <sys/stat.h>
@@ -23,7 +25,8 @@
 #include <unistd.h>
 #include <vector>
 #include <utime.h>
-#include "tools.h"
+
+const std::string kHelpText{"Si no contiene opciones el programa se ejecuta asi: ./copyfile ruta/de/origen ruta/de/destino.\nSi contiene opciones se podran usar -m y .a"};
 /**
  * @name: Usage
  * @brief: Controlar el uso del programa para que funcione correctamente
@@ -48,13 +51,38 @@ void Usage(int numero_parametros, std::string& primer_argumento) {
   }
 }
 
-std::error_code copy_file(const std::string& src_path, const std::string& dst_path, bool preserve_all=false) {
+std::vector<uint8_t> ReadFile(const int fd) {
+  try {
+    std::vector<uint8_t> buffer(16ul * 1024 * 1024);
+    ssize_t bytes_leidos{read(fd, buffer.data(), buffer.size())};
+    if (bytes_leidos < 0) {
+      throw std::system_error(errno, std::system_category());
+    }
+    buffer.resize(bytes_leidos);
+    return buffer;
+  } catch (const std::exception& error) {
+    std::cerr << "Error Copying file" << std::endl;
+    throw error;
+  }
+}
+
+std::vector<uint8_t> WriteFile(int fd, std::vector<uint8_t>& buffer) {
+  try {
+    write(fd, buffer.data(), buffer.size());
+    return buffer;
+  } catch (const std::exception& error) {
+    std::cerr << "Error Copying file" << std::endl;
+    throw error;
+  }
+}
+
+void copy_file(const std::string& src_path, const std::string& dst_path, bool preserve_all=false) {
   try {
     std::string copia_src_path{src_path};
     std::string copia_dst_path{dst_path};
     struct stat src_comprobacion;
     if (stat(src_path.c_str(), &src_comprobacion) == -1 && S_ISREG(src_comprobacion.st_mode) == 0) {
-      return std::error_code(errno, std::system_category());
+      throw std::runtime_error("The source path doesn't exist or the source file isn't a regular file.");
     }
     struct stat dst_comprobacion;
     if (stat(dst_path.c_str(), &dst_comprobacion)) {
@@ -64,17 +92,26 @@ std::error_code copy_file(const std::string& src_path, const std::string& dst_pa
         copia_dst_path.append(basename(src_file));
       }
     }
-    int src_fd = open(src_path.c_str(), O_RDONLY);
-    int dst_fd = open(copia_dst_path.c_str(), O_CREAT | O_WRONLY, 0666);
+    int fd_src = open(src_path.c_str(), O_RDONLY);
+    scope::exit src_exit([fd_src](){
+      close(fd_src);
+    });
+    int fd_dst = open(copia_dst_path.c_str(), O_CREAT | O_WRONLY, 0666);
+    scope::exit dst_exit([fd_dst](){
+      close(fd_dst);
+    });
     struct stat dst_copia_comprobacion;
     if (stat(copia_dst_path.c_str(), &dst_copia_comprobacion)) {
       open(copia_dst_path.c_str(), O_TRUNC);
     } else {
       open(copia_dst_path.c_str(), O_CREAT, 0666);
     }
-    ssize_t datos;
-    while (datos != 0) {
-      
+    while (true) {
+      std::vector<uint8_t> buffer = ReadFile(fd_src);
+      if (buffer.empty()) {
+        break;
+      }
+      WriteFile(fd_dst, buffer);
     }
     if (preserve_all) {
       chmod(copia_dst_path.c_str(), src_comprobacion.st_mode);
@@ -93,3 +130,5 @@ std::error_code copy_file(const std::string& src_path, const std::string& dst_pa
 std::error_code move_file(const std::string& src_path, const std::string& dst_path) {
   return std::error_code(errno, std::system_category());
 }
+
+#endif
