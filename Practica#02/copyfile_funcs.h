@@ -25,6 +25,7 @@
 #include <unistd.h>
 #include <vector>
 #include <utime.h>
+#include "scope.hpp"
 
 const std::string kHelpText{"Si no contiene opciones el programa se ejecuta asi: ./copyfile ruta/de/origen ruta/de/destino.\nSi contiene opciones se podran usar -m y .a"};
 /**
@@ -93,18 +94,21 @@ void copy_file(const std::string& src_path, const std::string& dst_path, bool pr
       }
     }
     int fd_src = open(src_path.c_str(), O_RDONLY);
-    scope::exit src_exit([fd_src](){
+    scope::scope_exit src_exit([fd_src](){
       close(fd_src);
     });
-    int fd_dst = open(copia_dst_path.c_str(), O_CREAT | O_WRONLY, 0666);
-    scope::exit dst_exit([fd_dst](){
+    struct stat dst_copia_comprobacion;
+    int fd_dst;
+    if (stat(copia_dst_path.c_str(), &dst_copia_comprobacion)) {
+      fd_dst = open(copia_dst_path.c_str(), O_WRONLY | O_TRUNC);
+    scope::scope_exit dst_exit([fd_dst](){
       close(fd_dst);
     });
-    struct stat dst_copia_comprobacion;
-    if (stat(copia_dst_path.c_str(), &dst_copia_comprobacion)) {
-      open(copia_dst_path.c_str(), O_TRUNC);
     } else {
-      open(copia_dst_path.c_str(), O_CREAT, 0666);
+      fd_dst = open(copia_dst_path.c_str(), O_CREAT | O_WRONLY, 0666);
+      scope::scope_exit dst_exit([fd_dst](){
+      close(fd_dst);
+    });
     }
     while (true) {
       std::vector<uint8_t> buffer = ReadFile(fd_src);
