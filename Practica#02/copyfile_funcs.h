@@ -67,7 +67,7 @@ std::vector<uint8_t> ReadFile(const int fd) {
   }
 }
 
-std::vector<uint8_t> WriteFile(const int fd, std::vector<uint8_t> buffer) {
+std::vector<uint8_t> WriteFile(int fd, const std::vector<uint8_t> buffer) {
   try {
     ssize_t bytes_escritos = write(fd, buffer.data(), buffer.size());
     if (bytes_escritos < 0) {
