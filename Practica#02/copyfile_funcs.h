@@ -68,13 +68,12 @@ std::vector<uint8_t> ReadFile(const int fd) {
   }
 }
 
-std::vector<uint8_t> WriteFile(int fd, const std::vector<uint8_t> buffer) {
+void WriteFile(int fd, const std::vector<uint8_t>& buffer) {
   try {
     ssize_t bytes_escritos = write(fd, buffer.data(), buffer.size());
     if (bytes_escritos < 0) {
       throw std::system_error(errno, std::system_category());
     }
-    return buffer;
   } catch (const std::exception& error) {
     std::cerr << "Error Writing file" << std::endl;
     throw error;
@@ -104,12 +103,12 @@ void copy_file(const std::string& src_path, const std::string& dst_path, bool pr
     struct stat dst_copia_comprobacion;
     int fd_dst;
     if (stat(copia_dst_path.c_str(), &dst_copia_comprobacion) == 0) {
-      fd_dst = open(copia_dst_path.c_str(), O_WRONLY | O_TRUNC);
+      fd_dst = open(copia_dst_path.c_str(), O_TRUNC | O_WRONLY);
     scope::scope_exit dst_exit([fd_dst](){
       close(fd_dst);
     });
     } else {
-      fd_dst = open(copia_dst_path.c_str(), O_WRONLY | O_CREAT, 0666);
+      fd_dst = open(copia_dst_path.c_str(), O_CREAT | O_WRONLY, 0666);
     scope::scope_exit dst_exit([fd_dst](){
       close(fd_dst);
     });
