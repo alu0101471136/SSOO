@@ -18,7 +18,10 @@
 int main(int argc, char* argv[]) {
   int numero_argumentos{argc};
   std::string primer_argumento{argv[1]};
-  Usage(numero_argumentos, primer_argumento);
+  int comprobacion = Usage(numero_argumentos, primer_argumento);
+  if (comprobacion < 0) {
+    throw std::runtime_error("El programa ha finalizado debido a los argumentos."); 
+  }
   std::string segundo_argumento{argv[2]};
   if (primer_argumento == "-m") {
     std::string tercer_argumento{argv[3]};

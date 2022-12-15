@@ -34,22 +34,23 @@ const std::string kHelpText{"Si no contiene opciones el programa se ejecuta asi:
  * @param: numero_parametros: el numero de parametros pasados al ejecutar el programa, 
  *         primer_argumento: parametro en el que estara '--help'
  */
-void Usage(int numero_parametros, std::string& primer_argumento) {
+int Usage(int numero_parametros, std::string& primer_argumento) {
   if (primer_argumento == "--help" ) {
     std::cout << kHelpText << std::endl;
-    exit(EXIT_SUCCESS); 
+    return -1; 
   } else if(primer_argumento == "-m" || primer_argumento == "-a") {
     if (numero_parametros != 4) {
     std::cout << "Modo de Uso: ./copyfile (-m|-a) ruta/de/origen ruta/de/destino" << std::endl;
     std::cout << "Pruebe ./copyfile --help para más información" << std::endl;
-    exit(EXIT_SUCCESS);
+    return -1; 
   }
   }
   if (numero_parametros != 3) {
     std::cout << "Modo de Uso: ./copyfile ruta/de/origen ruta/de/destino" << std::endl;
     std::cout << "Pruebe ./copyfile --help para más información" << std::endl;
-    exit(EXIT_SUCCESS);
+    return -1; 
   }
+  return 0;
 }
 
 std::vector<uint8_t> ReadFile(const int fd) {
