@@ -125,4 +125,38 @@ void move_file(const std::string& src_path, const std::string& dst_path) {
   int xd;
 }
 
+void print (const std::string& str) {
+  int bytes_escritos = write(STDOUT_FILENO, str.c_str(), str.size());
+  if (bytes_escritos < 0) {
+    throw std::system_error(errno, std::system_category());
+  }
+}
+
+void print_prompt(int last_command_status) {
+  std::string salida_prompt;
+  std::string usuario, host_name, ruta_prompt;
+  char* ruta_actual;
+  usuario = getlogin();
+  size_t MAX_SIZE{20};
+  char hostname[MAX_SIZE];
+  int hostname_err = gethostname(&hostname[0], MAX_SIZE);
+  if (hostname_err < 0) {
+    throw std::system_error(errno, std::system_category());
+  }
+  ruta_actual = getcwd(NULL, 0);
+  std::string final{"$>"};
+  if (last_command_status < 0) {
+    final = "$<";
+  }
+  host_name = hostname;
+  ruta_prompt = ruta_actual;
+  salida_prompt = salida_prompt + usuario + "@" + hostname + ":" + ruta_prompt + " " + final;
+  print(salida_prompt);
+}
+
+void read_line(int fd, std::string& line) {
+  std::vector<uint8_t> pending_input;
+  
+}
+
 #endif

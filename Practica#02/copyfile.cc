@@ -29,6 +29,8 @@ int main(int argc, char* argv[]) {
       copy_file(segundo_argumento, tercer_argumento, true);
     } else {
       copy_file(primer_argumento, segundo_argumento);
+      int algo{0};
+      print_prompt(algo);
     }
   } catch (std::exception& error) {
     std::cerr << "Error on runtime" << "\n";
