@@ -12,29 +12,27 @@
   */
 
 #include <iostream>
+#include <unistd.h>
 #include <string>
-#include "copyfile_funcs.h"
+#include "tools.h"
 
 int main(int argc, char* argv[]) {
   int numero_argumentos{argc};
   std::string primer_argumento{argv[1]};
-  Usage(numero_argumentos, primer_argumento);
-  std::string segundo_argumento{argv[2]};
+  bool comprobacion_argumentos = Usage(numero_argumentos, primer_argumento);
+  if (!comprobacion_argumentos) {
+    exit(EXIT_FAILURE);
+  }
+  std::string linea_entrada;
   try {
-    if (primer_argumento == "-m") {
-      std::string tercer_argumento{argv[3]};
-      move_file(segundo_argumento, tercer_argumento);
-    } else if (primer_argumento == "-a") {
-      std::string tercer_argumento{argv[3]};
-      copy_file(segundo_argumento, tercer_argumento, true);
-    } else {
-      copy_file(primer_argumento, segundo_argumento);
-      int algo{0};
-      print_prompt(algo);
+    while (true) {
+      int estado_comando_anterior{0};
+      print_prompt(estado_comando_anterior);
+      read_line(STDOUT_FILENO, linea_entrada);
     }
   } catch (std::exception& error) {
     std::cerr << "Error on runtime" << "\n";
-    return -1;
+    exit(EXIT_FAILURE);
   }
   return 0;
 }

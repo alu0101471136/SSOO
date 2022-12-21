@@ -10,8 +10,6 @@
   * @brief Programa llamado copyfile, muy similar al conocido comando cp
   * @bug No existen fallos conocidos
   */
-#ifndef COPY_H
-#define COPY_H
 
 #include <iostream>
 #include <sys/stat.h>
@@ -25,16 +23,16 @@
 #include <unistd.h>
 #include <vector>
 #include <utime.h>
+#include "tools.h"
 #include "scope.hpp"
 
-const std::string kHelpText{"Si no contiene opciones el programa se ejecuta asi: ./copyfile ruta/de/origen ruta/de/destino.\nSi contiene opciones se podran usar -m y .a"};
 /**
  * @name: Usage
  * @brief: Controlar el uso del programa para que funcione correctamente
  * @param: numero_parametros: el numero de parametros pasados al ejecutar el programa, 
  *         primer_argumento: parametro en el que estara '--help'
  */
-void Usage(int numero_parametros, std::string& primer_argumento) {
+bool Usage(int numero_parametros, std::string& primer_argumento) {
   if (primer_argumento == "--help" ) {
     std::cout << kHelpText << std::endl;
     throw std::runtime_error(""); 
@@ -42,13 +40,14 @@ void Usage(int numero_parametros, std::string& primer_argumento) {
     if (numero_parametros != 4) {
       std::cerr << "Modo de Uso: ./copyfile (-m|-a) ruta/de/origen ruta/de/destino" << std::endl;
       std::cerr << "Pruebe ./copyfile --help para más información" << std::endl;
-      throw std::runtime_error("Usage");
+      return false;
     }
   } else if (numero_parametros != 3) {
     std::cerr << "Modo de Uso: ./copyfile ruta/de/origen ruta/de/destino" << std::endl;
     std::cerr << "Pruebe ./copyfile --help para más información" << std::endl;
-    throw std::runtime_error("Usage");
+    return false;
   }
+  return true;
 }
 
 std::vector<uint8_t> ReadFile(const int fd) {
@@ -69,7 +68,7 @@ void WriteFile(int fd, const std::vector<uint8_t>& buffer) {
   }
 }
 
-void copy_file(const std::string& src_path, const std::string& dst_path, bool preserve_all=false) {
+void copy_file(const std::string& src_path, const std::string& dst_path, bool preserve_all) {
   std::string copia_src_path{src_path};
   std::string copia_dst_path{dst_path};
   struct stat src_comprobacion;
@@ -83,6 +82,8 @@ void copy_file(const std::string& src_path, const std::string& dst_path, bool pr
       char* src_file = const_cast<char*>(src_path.c_str());
       copia_dst_path.append(basename(src_file));
     }
+  } else {
+    throw std::system_error(errno, std::system_category());
   }
   int fd_src = open(src_path.c_str(), O_RDONLY);
   scope::scope_exit src_exit([fd_src](){
@@ -155,8 +156,20 @@ void print_prompt(int last_command_status) {
 }
 
 void read_line(int fd, std::string& line) {
-  std::vector<uint8_t> pending_input;
-  
+  static std::vector<uint8_t> pending_input;
+  while (true) {
+    if (std::find(pending_input.begin(), pending_input.end(), '\n') != pending_input.end()) {
+      int iterador_salto_linea;
+      for (unsigned i = 0; i < pending_input.size(); ++i) {
+        if (pending_input[i] == '\n') {
+          line += pending_input[i];
+          iterador_salto_linea = i;
+          break;
+        }
+        line += pending_input[i];
+      }
+      pending_input.erase(pending_input.begin(), pending_input.begin() + iterador_salto_linea);
+      return;
+    } 
+  }
 }
-
-#endif

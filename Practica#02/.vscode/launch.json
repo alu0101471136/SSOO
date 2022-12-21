@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/copyfile",
-            "args": ["~/Documentos/Ayed/sll_t.h", "~/Documentos/"],
+            "args": ["~/Documentos/Ayed/sll_t.h", "~/Documen"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/",
             "environment": [],
