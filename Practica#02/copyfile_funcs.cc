@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <vector>
 #include <utime.h>
+#include <sstream>
 #include "tools.h"
 #include "scope.hpp"
 
@@ -171,5 +172,45 @@ void read_line(int fd, std::string& line) {
       pending_input.erase(pending_input.begin(), pending_input.begin() + iterador_salto_linea);
       return;
     } 
+    std::vector<uint8_t> buffer = ReadFile(fd);
+    if (buffer.empty()) {
+      if (!pending_input.empty()) {
+        for (unsigned i = 0; i < pending_input.size(); ++i)
+          line += pending_input[i];
+        line += '\n';
+        pending_input.clear();
+      }
+      return;
+    } else {
+      for (unsigned i = 0; i < buffer.size(); ++i)
+        pending_input.push_back(buffer[i]);
+    }
   }
+}
+
+std::vector<shell::command> parse_line(const std::string& line) {
+  std::istringstream iss(line);
+  std::vector<shell::command> vector_comandos;
+  shell::command vector_auxiliar;
+  while (!iss.eof()) {
+    std::string word;
+    iss >> word;
+    if (word[word.size() - 1] == ';' || word[word.size() - 1] == '|' || word[word.size() - 1] == '&') {
+      std::string cadena_aux;
+      cadena_aux += word[word.size() - 1]; 
+      word.erase(word.end() - 1);
+      vector_auxiliar.push_back(word);
+      vector_auxiliar.push_back(cadena_aux);
+      vector_comandos.push_back(vector_auxiliar);
+      vector_auxiliar.clear();
+    }
+    if (word[0] == '#') {
+      continue;
+    }
+    vector_auxiliar.push_back(word);
+  }
+  if (!vector_auxiliar.empty()) {
+    vector_comandos.push_back(vector_auxiliar);
+  }
+  return vector_comandos;
 }

@@ -29,6 +29,9 @@ int main(int argc, char* argv[]) {
       int estado_comando_anterior{0};
       print_prompt(estado_comando_anterior);
       read_line(STDOUT_FILENO, linea_entrada);
+      if (!linea_entrada.empty()) {
+        parse_line(linea_entrada);
+      }
     }
   } catch (std::exception& error) {
     std::cerr << "Error on runtime" << "\n";
