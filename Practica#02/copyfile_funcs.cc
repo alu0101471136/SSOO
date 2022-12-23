@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <vector>
 #include <utime.h>
+#include <algorithm>
 #include <sstream>
 #include "tools.h"
 #include "scope.hpp"
@@ -37,14 +38,9 @@ bool Usage(int numero_parametros, std::string& primer_argumento) {
   if (primer_argumento == "--help" ) {
     std::cout << kHelpText << std::endl;
     throw std::runtime_error(""); 
-  } else if(primer_argumento == "-m" || primer_argumento == "-a") {
-    if (numero_parametros != 4) {
-      std::cerr << "Modo de Uso: ./copyfile (-m|-a) ruta/de/origen ruta/de/destino" << std::endl;
-      std::cerr << "Pruebe ./copyfile --help para más información" << std::endl;
-      return false;
-    }
-  } else if (numero_parametros != 3) {
-    std::cerr << "Modo de Uso: ./copyfile ruta/de/origen ruta/de/destino" << std::endl;
+  }
+  if (numero_parametros != 1) {
+    std::cerr << "Modo de Uso: ./copyfile" << std::endl;
     std::cerr << "Pruebe ./copyfile --help para más información" << std::endl;
     return false;
   }
@@ -146,9 +142,9 @@ void print_prompt(int last_command_status) {
     throw std::system_error(errno, std::system_category());
   }
   ruta_actual = getcwd(NULL, 0);
-  std::string final{"$>"};
+  std::string final{"$> "};
   if (last_command_status < 0) {
-    final = "$<";
+    final = "$< ";
   }
   host_name = hostname;
   ruta_prompt = ruta_actual;
@@ -158,32 +154,26 @@ void print_prompt(int last_command_status) {
 
 void read_line(int fd, std::string& line) {
   static std::vector<uint8_t> pending_input;
+  line.clear();
   while (true) {
-    if (std::find(pending_input.begin(), pending_input.end(), '\n') != pending_input.end()) {
-      int iterador_salto_linea;
-      for (unsigned i = 0; i < pending_input.size(); ++i) {
-        if (pending_input[i] == '\n') {
-          line += pending_input[i];
-          iterador_salto_linea = i;
-          break;
-        }
-        line += pending_input[i];
-      }
-      pending_input.erase(pending_input.begin(), pending_input.begin() + iterador_salto_linea);
+    std::vector<uint8_t>::iterator primer_salto_linea{std::find(pending_input.begin(), pending_input.end(), '\n')};
+    if (primer_salto_linea != pending_input.end()) {
+      for (auto& i : pending_input)
+        line += i;
+      pending_input.erase(pending_input.begin(), primer_salto_linea + 1);
       return;
     } 
     std::vector<uint8_t> buffer = ReadFile(fd);
     if (buffer.empty()) {
       if (!pending_input.empty()) {
-        for (unsigned i = 0; i < pending_input.size(); ++i)
-          line += pending_input[i];
+        for (auto& i : pending_input)
+          line += i;
         line += '\n';
         pending_input.clear();
       }
       return;
     } else {
-      for (unsigned i = 0; i < buffer.size(); ++i)
-        pending_input.push_back(buffer[i]);
+      pending_input.insert(pending_input.end(), buffer.begin(), buffer.end());
     }
   }
 }
@@ -195,6 +185,9 @@ std::vector<shell::command> parse_line(const std::string& line) {
   while (!iss.eof()) {
     std::string word;
     iss >> word;
+    if (word[0] == '#' || word == "#") {
+      break;
+    }
     if (word[word.size() - 1] == ';' || word[word.size() - 1] == '|' || word[word.size() - 1] == '&') {
       std::string cadena_aux;
       cadena_aux += word[word.size() - 1]; 
@@ -203,8 +196,6 @@ std::vector<shell::command> parse_line(const std::string& line) {
       vector_auxiliar.push_back(cadena_aux);
       vector_comandos.push_back(vector_auxiliar);
       vector_auxiliar.clear();
-    }
-    if (word[0] == '#') {
       continue;
     }
     vector_auxiliar.push_back(word);

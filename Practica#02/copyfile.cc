@@ -18,24 +18,33 @@
 
 int main(int argc, char* argv[]) {
   int numero_argumentos{argc};
-  std::string primer_argumento{argv[1]};
-  bool comprobacion_argumentos = Usage(numero_argumentos, primer_argumento);
+  bool comprobacion_argumentos{true};
+  if (numero_argumentos > 1) {
+    std::string primer_argumento{argv[1]};
+    comprobacion_argumentos = Usage(numero_argumentos, primer_argumento);
+  }
   if (!comprobacion_argumentos) {
-    exit(EXIT_FAILURE);
+    return 0;
   }
   std::string linea_entrada;
+  int estado_comando_anterior{0};
   try {
     while (true) {
-      int estado_comando_anterior{0};
-      print_prompt(estado_comando_anterior);
-      read_line(STDOUT_FILENO, linea_entrada);
+      if (isatty(STDIN_FILENO)) {
+        print_prompt(estado_comando_anterior);
+      }
+      read_line(STDIN_FILENO, linea_entrada);
       if (!linea_entrada.empty()) {
-        parse_line(linea_entrada);
+        std::vector<shell::command> comandos_entrantes;
+        comandos_entrantes = parse_line(linea_entrada);
+        
+      } else {
+        break;
       }
     }
   } catch (std::exception& error) {
     std::cerr << "Error on runtime" << "\n";
-    exit(EXIT_FAILURE);
+    return 0;
   }
   return 0;
 }
