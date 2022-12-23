@@ -74,10 +74,12 @@ void copy_file(const std::string& src_path, const std::string& dst_path, bool pr
   }
   struct stat dst_comprobacion;
   if (stat(dst_path.c_str(), &dst_comprobacion) == 0) {
-    assert(src_path != dst_path);
-    if (S_ISDIR(dst_comprobacion.st_mode)) {
+    if (src_comprobacion.st_ino != dst_comprobacion.st_ino) {
+      if (S_ISDIR(dst_comprobacion.st_mode)) {
       char* src_file = const_cast<char*>(src_path.c_str());
+      copia_dst_path.append("/");
       copia_dst_path.append(basename(src_file));
+      }
     }
   } else {
     throw std::system_error(errno, std::system_category());
@@ -120,7 +122,33 @@ void copy_file(const std::string& src_path, const std::string& dst_path, bool pr
 }
 
 void move_file(const std::string& src_path, const std::string& dst_path) {
-  int xd;
+  std::string copia_dst_path{dst_path};
+  struct stat src_comprobacion;
+  if (stat(src_path.c_str(), &src_comprobacion)) {
+    throw std::runtime_error("The source path doesn't exist.");
+  }
+  struct stat dst_comprobacion;
+  if (stat(dst_path.c_str(), &dst_comprobacion) == 0) {
+    if (S_ISDIR(dst_comprobacion.st_mode)) {
+      char* src_file = const_cast<char*>(src_path.c_str());
+      copia_dst_path.append("/");
+      copia_dst_path.append(basename(src_file));
+    }
+  }
+  if (src_comprobacion.st_ino == dst_comprobacion.st_ino) {
+    if (src_comprobacion.st_dev == dst_comprobacion.st_dev) {
+      int rename_check = rename(src_path.c_str(), copia_dst_path.c_str());
+      if (rename_check < 0) {
+        throw std::runtime_error("Error on rename function.");
+      }
+    }
+  } else {
+    copy_file(src_path, dst_path, true);
+    int unlink_check = unlink(src_path.c_str());
+    if (unlink_check < 0) {
+      throw std::runtime_error("Error on unlink function.");
+    }
+  }
 }
 
 void print (const std::string& str) {
@@ -233,6 +261,29 @@ int cd_command(const std::vector<std::string>& args) {
   return 0;
 }
 
+int cp_command(const std::vector<std::string>& args) {
+  if (args.size() == 3) {
+    copy_file(args[1], args[2]);
+  } else if (args.size() == 4) {
+    if (args[1] == "-a") {
+      copy_file(args[2], args[3], true);
+    }
+  } else {
+    std::cerr << "Error de argumentos" << "\n";
+    return -1;
+  }
+  return 0;
+}
+
+int mv_command(const std::vector<std::string>& args) {
+  if (args.size() != 3) {
+    std::cerr << "Error de parametros" << "\n";
+    return -1;
+  } 
+  move_file(args[1], args[2]);
+  return 0;
+}
+
 shell::command_result execute_commands(const std::vector<shell::command>& commands) {
   int return_value{0};
   bool is_quit_requested{false};
@@ -247,23 +298,29 @@ shell::command_result execute_commands(const std::vector<shell::command>& comman
     } else if (commands[i][0] == "cd") {
       resultado_ejecucion.return_value = cd_command(commands[i]);
       if (resultado_ejecucion.return_value == -4) {
-        std::cerr << "Demasiados argumentos" << "\n";
+        std::cerr << "Fallo en los argumentos" << "\n";
       } else if (resultado_ejecucion.return_value < 0) {
         break;
       }
     } else if(commands[i][0] == "cp") {
-
-      if (resultado_ejecucion.return_value != 0) {
-        throw std::runtime_error("Error on cp command");
+      resultado_ejecucion.return_value = cp_command(commands[i]);
+      if (resultado_ejecucion.return_value < 0) {
+        break;
       }
     } else if(commands[i][0] == "mv") {
-
-      if (resultado_ejecucion.return_value != 0) {
-        throw std::runtime_error("Error on mv command");
+      resultado_ejecucion.return_value = mv_command(commands[i]);
+      if (resultado_ejecucion.return_value < 0) {
+        break;
       }
     } else if (commands[i][0] == "exit") {
       return shell::command_result::quit(resultado_ejecucion.return_value);
+    } else {
+      execute_program(commands[i]);
     }
   }
   return resultado_ejecucion;
+}
+
+int execute_program(const std::vector<std::string>& args, bool has_wait=true) {
+
 }
