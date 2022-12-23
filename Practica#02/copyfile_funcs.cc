@@ -185,7 +185,7 @@ std::vector<shell::command> parse_line(const std::string& line) {
   while (!iss.eof()) {
     std::string word;
     iss >> word;
-    if (word[0] == '#' || word == "#") {
+    if (word[0] == '#' || word == "#" || word == "") {
       break;
     }
     if (word[word.size() - 1] == ';' || word[word.size() - 1] == '|' || word[word.size() - 1] == '&') {
