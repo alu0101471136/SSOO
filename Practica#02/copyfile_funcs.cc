@@ -185,15 +185,19 @@ std::vector<shell::command> parse_line(const std::string& line) {
   while (!iss.eof()) {
     std::string word;
     iss >> word;
-    if (word[0] == '#' || word == "#" || word == "") {
-      break;
+    if (word[0] == '#' || word == "#" || word == "") { /// Si la palabra es o empieza por #, significa que no ha de
+      break;                                           /// tenerse en cuenta por lo que se retorna lo que tenga
     }
     if (word[word.size() - 1] == ';' || word[word.size() - 1] == '|' || word[word.size() - 1] == '&') {
       std::string cadena_aux;
       cadena_aux += word[word.size() - 1]; 
       word.erase(word.end() - 1);
+      if (word == "") { /// si word esta vacio significa que se ha encontrado | o & unicamente
+        vector_comandos.push_back(vector_auxiliar);
+        vector_auxiliar.clear();
+        continue;
+      }
       vector_auxiliar.push_back(word);
-      vector_auxiliar.push_back(cadena_aux);
       vector_comandos.push_back(vector_auxiliar);
       vector_auxiliar.clear();
       continue;
@@ -204,4 +208,62 @@ std::vector<shell::command> parse_line(const std::string& line) {
     vector_comandos.push_back(vector_auxiliar);
   }
   return vector_comandos;
+}
+
+int echo_command(const std::vector<std::string>& args) {
+  std::string cadena_salida;
+  for (unsigned i = 1; i < args.size(); ++i) {
+    cadena_salida += args[i];
+    cadena_salida += " "; 
+  }
+  cadena_salida += "\n";
+  print(cadena_salida); /// print() se encarga de controlar sus errores
+  return 0;
+}
+
+int cd_command(const std::vector<std::string>& args) {
+  if (args.size() != 2) {
+    return -4;
+  } 
+  int chdir_value = chdir(args[1].c_str());
+  if (chdir_value < 0) {
+    std::cerr << "Error al intentar cambiar de directorio" << "\n";
+    return chdir_value;
+  }
+  return 0;
+}
+
+shell::command_result execute_commands(const std::vector<shell::command>& commands) {
+  int return_value{0};
+  bool is_quit_requested{false};
+  shell::command_result resultado_ejecucion{return_value, is_quit_requested};
+  for (unsigned i = 0; i < commands.size(); ++i) {
+    if (commands[i][0] == "echo") {
+      resultado_ejecucion.return_value = echo_command(commands[i]);
+      if (resultado_ejecucion.return_value != 0) {
+        std::cerr << "Error on echo command" << "\n";
+        break;
+      }
+    } else if (commands[i][0] == "cd") {
+      resultado_ejecucion.return_value = cd_command(commands[i]);
+      if (resultado_ejecucion.return_value == -4) {
+        std::cerr << "Demasiados argumentos" << "\n";
+      } else if (resultado_ejecucion.return_value < 0) {
+        break;
+      }
+    } else if(commands[i][0] == "cp") {
+
+      if (resultado_ejecucion.return_value != 0) {
+        throw std::runtime_error("Error on cp command");
+      }
+    } else if(commands[i][0] == "mv") {
+
+      if (resultado_ejecucion.return_value != 0) {
+        throw std::runtime_error("Error on mv command");
+      }
+    } else if (commands[i][0] == "exit") {
+      return shell::command_result::quit(resultado_ejecucion.return_value);
+    }
+  }
+  return resultado_ejecucion;
 }

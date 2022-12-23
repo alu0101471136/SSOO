@@ -13,6 +13,7 @@
 
 #include <iostream>
 #include <unistd.h>
+#include <algorithm>
 #include <string>
 #include "tools.h"
 
@@ -27,17 +28,22 @@ int main(int argc, char* argv[]) {
     return 0;
   }
   std::string linea_entrada;
-  int estado_comando_anterior{0};
+  shell::command_result resultado_execute{0, false};
   try {
     while (true) {
       if (isatty(STDIN_FILENO)) {
-        print_prompt(estado_comando_anterior);
+        print_prompt(resultado_execute.return_value);
       }
       read_line(STDIN_FILENO, linea_entrada);
       if (!linea_entrada.empty()) {
-        std::vector<shell::command> comandos_entrantes;
-        comandos_entrantes = parse_line(linea_entrada);
-        
+        std::vector<shell::command> comandos_entrantes = parse_line(linea_entrada);
+        if (comandos_entrantes.empty()) {
+          continue;
+        } 
+        resultado_execute = execute_commands(comandos_entrantes);
+        if (resultado_execute.is_quit_requested) {
+          return resultado_execute.return_value;
+        }
       } else {
         break;
       }
