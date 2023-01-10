@@ -25,6 +25,7 @@
 #include <utime.h>
 #include <algorithm>
 #include <sstream>
+#include <sys/wait.h>
 #include "tools.h"
 #include "scope.hpp"
 
@@ -216,7 +217,7 @@ std::vector<shell::command> parse_line(const std::string& line) {
     if (word[0] == '#' || word == "#" || word == "") { /// Si la palabra es o empieza por #, significa que no ha de
       break;                                           /// tenerse en cuenta por lo que se retorna lo que tenga
     }
-    if (word[word.size() - 1] == ';' || word[word.size() - 1] == '|' || word[word.size() - 1] == '&') {
+    if (word[word.size() - 1] == ';' || word[word.size() - 1] == '|') {
       std::string cadena_aux;
       cadena_aux += word[word.size() - 1]; 
       word.erase(word.end() - 1);
@@ -284,10 +285,49 @@ int mv_command(const std::vector<std::string>& args) {
   return 0;
 }
 
+int execute(const std::vector<std::string>& args) {
+  std::vector<const char*> argv;
+  for (auto& arg : args)
+    argv.push_back(arg.c_str());
+  argv.push_back(nullptr);
+  int comprobacion_comando = execvp(argv[0], const_cast<char* const*>(argv.data()));
+  if (comprobacion_comando < 0) {
+    std::cerr << "Fallo en la ejecución del comando " << argv[0] << "\n";
+    return comprobacion_comando;
+  }
+  return 0;
+}
+
+int execute_program(const std::vector<std::string>& args, bool has_wait=true) {
+  pid_t child = fork(); 
+  if (child == 0) {
+    // Aquí solo entra el proceso hijo 
+    int comprobacion_comando = execute(args);  
+    if (comprobacion_comando < 0) {
+      return comprobacion_comando;
+    }
+    return 0;
+  } else if (child > 0) {
+    // Aquí solo entra el proceso padre
+    if (has_wait) {
+      int status;
+      wait(&status); 
+      return 0;
+    } else {
+      return child;
+    }
+  } else {
+    // Aquí solo entra el padre si no pudo crear el hijo
+    std::cerr << "Error al crear al hijo" << "\n";
+    return -1;
+  }
+}
+
 shell::command_result execute_commands(const std::vector<shell::command>& commands) {
   int return_value{0};
   bool is_quit_requested{false};
   shell::command_result resultado_ejecucion{return_value, is_quit_requested};
+  std::vector<std::pair<int, std::string>> vector_segundo_plano;
   for (unsigned i = 0; i < commands.size(); ++i) {
     if (commands[i][0] == "echo") {
       resultado_ejecucion.return_value = echo_command(commands[i]);
@@ -315,12 +355,27 @@ shell::command_result execute_commands(const std::vector<shell::command>& comman
     } else if (commands[i][0] == "exit") {
       return shell::command_result::quit(resultado_ejecucion.return_value);
     } else {
-      execute_program(commands[i]);
+      bool comprobacion_plano{true};
+      for (auto& j : commands[i]) {
+        if (j[j.size() - 1] == '&') {
+          comprobacion_plano = false;
+        }
+      }
+      resultado_ejecucion.return_value = execute_program(commands[i], comprobacion_plano);
+      if (resultado_ejecucion.return_value < 0) {
+        break;
+      } else if (resultado_ejecucion.return_value > 0) { /// Se esta ejecutando en segundo plano
+        vector_segundo_plano.push_back({resultado_ejecucion.return_value, commands[i][0]});
+      }
+    }
+  }
+  if (!vector_segundo_plano.empty()) {
+    for (unsigned j = 0; j < vector_segundo_plano.size(); ++j) {
+      int status;
+      waitpid(vector_segundo_plano[j].first, &status, WNOHANG);
+      std::cout << "[" << vector_segundo_plano[j].first << "] " << vector_segundo_plano[j].second 
+                << " ha salido (" << status << ")" << "\n";
     }
   }
   return resultado_ejecucion;
-}
-
-int execute_program(const std::vector<std::string>& args, bool has_wait=true) {
-
 }
