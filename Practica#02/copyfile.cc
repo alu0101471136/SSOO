@@ -18,14 +18,13 @@
 #include "tools.h"
 
 int main(int argc, char* argv[]) {
-  int numero_argumentos{argc};
-  bool comprobacion_argumentos{true};
-  if (numero_argumentos > 1) {
+  if (argc > 1) {
+    bool comprobacion_argumentos{true};
     std::string primer_argumento{argv[1]};
-    comprobacion_argumentos = Usage(numero_argumentos, primer_argumento);
-  }
-  if (!comprobacion_argumentos) {
-    return 0;
+    comprobacion_argumentos = Usage(argc, primer_argumento);
+    if (!comprobacion_argumentos) {
+      return 0;
+    }
   }
   std::string linea_entrada;
   shell::command_result resultado_execute{0, false};
@@ -37,11 +36,11 @@ int main(int argc, char* argv[]) {
       read_line(STDIN_FILENO, linea_entrada);
       if (!linea_entrada.empty()) {
         std::vector<shell::command> comandos_entrantes = parse_line(linea_entrada);
-        if (comandos_entrantes.empty()) {
+        if (comandos_entrantes.empty()) { /// Si no ha conseguido ningun comando vuelve al inicio
           continue;
         } 
         resultado_execute = execute_commands(comandos_entrantes);
-        if (resultado_execute.is_quit_requested) {
+        if (resultado_execute.is_quit_requested) { /// Este es el caso de que ejecutemos exit
           return resultado_execute.return_value;
         }
       } else {

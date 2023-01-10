@@ -38,7 +38,7 @@
 bool Usage(int numero_parametros, std::string& primer_argumento) {
   if (primer_argumento == "--help" ) {
     std::cout << kHelpText << std::endl;
-    throw std::runtime_error(""); 
+    return false;
   }
   if (numero_parametros != 1) {
     std::cerr << "Modo de Uso: ./copyfile" << std::endl;
@@ -47,7 +47,11 @@ bool Usage(int numero_parametros, std::string& primer_argumento) {
   }
   return true;
 }
-
+/**
+ * @name: ReadFile
+ * @brief: Funcion que aisla el uso de la funcion del sistema read()
+ * @param: fd: File Descriptor del archivo a leer
+ */
 std::vector<uint8_t> ReadFile(const int fd) {
   std::vector<uint8_t> buffer(16ul * 1024 * 1024);
   ssize_t bytes_leidos{read(fd, buffer.data(), buffer.size())};
@@ -58,27 +62,41 @@ std::vector<uint8_t> ReadFile(const int fd) {
   return buffer;
 
 }
-
+/**
+ * @name: WriteFile
+ * @brief: Funcion que aisla el uso de la funcion del sistema write()
+ * @param: fd: File Descriptor del archivo en el que se va a escribir, 
+ *         buffer: vector en el que se encuentran los datos a escribir
+ */
 void WriteFile(int fd, const std::vector<uint8_t>& buffer) {
   ssize_t bytes_escritos = write(fd, buffer.data(), buffer.size());
   if (bytes_escritos < 0) {
     throw std::system_error(errno, std::system_category(), "Error Writing file");
   }
 }
-
+/**
+ * @name: copy_file
+ * @brief: Copia un archivo en un destino del dispositivo
+ * @param: src_path: ruta del archivo que queremos copiar, 
+ *         dst_path: ruta destino del archivo,
+ *         preserve_all: controla si se copian los atributos del archivo  
+ */
 void copy_file(const std::string& src_path, const std::string& dst_path, bool preserve_all) {
   std::string copia_src_path{src_path};
   std::string copia_dst_path{dst_path};
   struct stat src_comprobacion;
-  if (stat(src_path.c_str(), &src_comprobacion) == -1 && S_ISREG(src_comprobacion.st_mode) == 0) {
-    throw std::runtime_error("The source path doesn't exist or the source file isn't a regular file.");
+  if (stat(src_path.c_str(), &src_comprobacion) < 0) {
+    throw std::runtime_error("The source path doesn't exist .");
+  }
+  if (S_ISREG(src_comprobacion.st_mode) < 0) {
+    throw std::runtime_error("The source file isn't a regular file.");
   }
   struct stat dst_comprobacion;
   if (stat(dst_path.c_str(), &dst_comprobacion) == 0) {
     if (src_comprobacion.st_ino != dst_comprobacion.st_ino) {
       if (S_ISDIR(dst_comprobacion.st_mode)) {
       char* src_file = const_cast<char*>(src_path.c_str());
-      copia_dst_path.append("/");
+      /// copia_dst_path.append("/"); NO SE AÑADE LA '/' PORQUE SE SUPONE QUE ESCRIBIRA LA RUTA COMPLETA
       copia_dst_path.append(basename(src_file));
       }
     }
@@ -121,7 +139,12 @@ void copy_file(const std::string& src_path, const std::string& dst_path, bool pr
     utime(copia_dst_path.c_str(), &buf_time);
   } 
 }
-
+/**
+ * @name: move_file
+ * @brief: Mueve un archivo a un destino del dispositivo
+ * @param: src_path: ruta del archivo que queremos mover, 
+ *         dst_path: ruta destino del archivo,
+ */
 void move_file(const std::string& src_path, const std::string& dst_path) {
   std::string copia_dst_path{dst_path};
   struct stat src_comprobacion;
@@ -132,7 +155,7 @@ void move_file(const std::string& src_path, const std::string& dst_path) {
   if (stat(dst_path.c_str(), &dst_comprobacion) == 0) {
     if (S_ISDIR(dst_comprobacion.st_mode)) {
       char* src_file = const_cast<char*>(src_path.c_str());
-      copia_dst_path.append("/");
+      /// copia_dst_path.append("/"); MISMA RAZON DE ANTES
       copia_dst_path.append(basename(src_file));
     }
   }
@@ -151,14 +174,25 @@ void move_file(const std::string& src_path, const std::string& dst_path) {
     }
   }
 }
-
+/**
+ * @name: print
+ * @brief: Muestra en pantalla el texto que queramos
+ * @param: str: Cadena de texto que queremos imprimir
+ *         
+ */
 void print (const std::string& str) {
   int bytes_escritos = write(STDOUT_FILENO, str.c_str(), str.size());
   if (bytes_escritos < 0) {
     throw std::system_error(errno, std::system_category());
   }
 }
-
+/**
+ * @name: print_primpt
+ * @brief: Muestra en pantalla la primpt de la shell
+ * @param: last_command_status: Entero que determina el 
+ *                              estado del comando anterior
+ *         
+ */
 void print_prompt(int last_command_status) {
   std::string salida_prompt;
   std::string usuario, host_name, ruta_prompt;
@@ -180,7 +214,13 @@ void print_prompt(int last_command_status) {
   salida_prompt = salida_prompt + usuario + "@" + hostname + ":" + ruta_prompt + " " + final;
   print(salida_prompt);
 }
-
+/**
+ * @name: read_line
+ * @brief: Lee del tecaldo estandar o de un fichero
+ * @param: fd: File Descriptor del archivo que queremos leer (siempre sera STDIN_FILENO), 
+ *         line: linea que modificaremos con el texto leido.
+ *         
+ */
 void read_line(int fd, std::string& line) {
   static std::vector<uint8_t> pending_input;
   line.clear();
@@ -206,7 +246,12 @@ void read_line(int fd, std::string& line) {
     }
   }
 }
-
+/**
+ * @name: parse_line
+ * @brief: Separa la linea en diferentes comandos
+ * @param: line: Linea con los comandos que partiremos
+ *         
+ */
 std::vector<shell::command> parse_line(const std::string& line) {
   std::istringstream iss(line);
   std::vector<shell::command> vector_comandos;
@@ -238,7 +283,12 @@ std::vector<shell::command> parse_line(const std::string& line) {
   }
   return vector_comandos;
 }
-
+/**
+ * @name: echo_command
+ * @brief: Funcion del comando echo, mustra por pantalla sus argumentos
+ * @param: args: Todo lo que este dentro de este vector se considera texto
+ *         
+ */
 int echo_command(const std::vector<std::string>& args) {
   std::string cadena_salida;
   for (unsigned i = 1; i < args.size(); ++i) {
@@ -249,7 +299,12 @@ int echo_command(const std::vector<std::string>& args) {
   print(cadena_salida); /// print() se encarga de controlar sus errores
   return 0;
 }
-
+/**
+ * @name: cd_command
+ * @brief: Funcion del comando cd, cambia de directorio
+ * @param: args: Solo debe contener el directorio destino
+ *         
+ */
 int cd_command(const std::vector<std::string>& args) {
   if (args.size() != 2) {
     return -4;
@@ -261,7 +316,13 @@ int cd_command(const std::vector<std::string>& args) {
   }
   return 0;
 }
-
+/**
+ * @name: cp_command
+ * @brief: Funcion del comando cp, copia un archivo
+ * @param: args: Debe tener el archivo a copiar y la ruta destino, 
+ *               tambien podra tener la opcion -a
+ *         
+ */
 int cp_command(const std::vector<std::string>& args) {
   if (args.size() == 3) {
     copy_file(args[1], args[2]);
@@ -275,7 +336,12 @@ int cp_command(const std::vector<std::string>& args) {
   }
   return 0;
 }
-
+/**
+ * @name: mv_command
+ * @brief: Funcion del comando mv, mueve un archivo a otro directorio
+ * @param: args: Debe tener el archivo a mover y la ruta destino
+ *         
+ */
 int mv_command(const std::vector<std::string>& args) {
   if (args.size() != 3) {
     std::cerr << "Error de parametros" << "\n";
@@ -284,7 +350,12 @@ int mv_command(const std::vector<std::string>& args) {
   move_file(args[1], args[2]);
   return 0;
 }
-
+/**
+ * @name: execute
+ * @brief: Funcion que aisla el comando exec() para un mejor uso
+ * @param: args: Contiene el comando mas sus argumentos
+ *         
+ */
 int execute(const std::vector<std::string>& args) {
   std::vector<const char*> argv;
   for (auto& arg : args)
@@ -297,7 +368,13 @@ int execute(const std::vector<std::string>& args) {
   }
   return 0;
 }
-
+/**
+ * @name: execute_program
+ * @brief: Funcion que ejecuta comandos externos no implementados 
+ * @param: args: Contiene el comando mas sus argumentos,
+ *         has_wait: Indica si debe esperar al proceso hijo.
+ *         
+ */
 int execute_program(const std::vector<std::string>& args, bool has_wait=true) {
   pid_t child = fork(); 
   if (child == 0) {
@@ -322,18 +399,23 @@ int execute_program(const std::vector<std::string>& args, bool has_wait=true) {
     return -1;
   }
 }
-
+/**
+ * @name: execute_commands
+ * @brief: Funcion que ejecuta comandos internos y externos 
+ * @param: commands: Contiene los comandos mas sus argumentos
+ *         
+ */
 shell::command_result execute_commands(const std::vector<shell::command>& commands) {
   int return_value{0};
   bool is_quit_requested{false};
   shell::command_result resultado_ejecucion{return_value, is_quit_requested};
   std::vector<std::pair<int, std::string>> vector_segundo_plano;
   for (unsigned i = 0; i < commands.size(); ++i) {
-    if (commands[i][0] == "echo") {
+    if (commands[i][0] == "echo") {           /// COMANDOS INTERNOS 
       resultado_ejecucion.return_value = echo_command(commands[i]);
       if (resultado_ejecucion.return_value != 0) {
         std::cerr << "Error on echo command" << "\n";
-        break;
+        break; /// No se lanza un error porque no es un motivo para detener el funcionamiento normal del programa
       }
     } else if (commands[i][0] == "cd") {
       resultado_ejecucion.return_value = cd_command(commands[i]);
@@ -354,7 +436,7 @@ shell::command_result execute_commands(const std::vector<shell::command>& comman
       }
     } else if (commands[i][0] == "exit") {
       return shell::command_result::quit(resultado_ejecucion.return_value);
-    } else {
+    } else {                  /// COMANDOS EXTERNOS 
       bool comprobacion_plano{true};
       for (auto& j : commands[i]) {
         if (j[j.size() - 1] == '&') {
@@ -369,7 +451,7 @@ shell::command_result execute_commands(const std::vector<shell::command>& comman
       }
     }
   }
-  if (!vector_segundo_plano.empty()) {
+  if (!vector_segundo_plano.empty()) { /// Comprueba si falta algun proceso en segundo plano que haya terminado
     for (unsigned j = 0; j < vector_segundo_plano.size(); ++j) {
       int status;
       waitpid(vector_segundo_plano[j].first, &status, WNOHANG);

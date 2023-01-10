@@ -18,7 +18,7 @@ namespace shell {
   };
 }
 
-const std::string kHelpText{"Si no contiene opciones el programa se ejecuta asi: ./copyfile ruta/de/origen ruta/de/destino.\nSi contiene opciones se podran usar -m y .a"};
+const std::string kHelpText{"El programa tiene como objetivo ejecutarse sin opciones,\nasi que debera escribir ./copyfile"};
 bool Usage(int numero_parametros, std::string& primer_argumento);
 void copy_file(const std::string& src_path, const std::string& dst_path, bool preserve_all=false);
 void move_file(const std::string& src_path, const std::string& dst_path);
