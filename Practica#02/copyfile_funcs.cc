@@ -96,7 +96,9 @@ void copy_file(const std::string& src_path, const std::string& dst_path, bool pr
     if (src_comprobacion.st_ino != dst_comprobacion.st_ino) {
       if (S_ISDIR(dst_comprobacion.st_mode)) {
       char* src_file = const_cast<char*>(src_path.c_str());
-      /// copia_dst_path.append("/"); NO SE AÑADE LA '/' PORQUE SE SUPONE QUE ESCRIBIRA LA RUTA COMPLETA
+      if (copia_dst_path[copia_dst_path.size() - 1] != '/') {
+        copia_dst_path.append("/"); 
+      }
       copia_dst_path.append(basename(src_file));
       }
     }
@@ -155,7 +157,9 @@ void move_file(const std::string& src_path, const std::string& dst_path) {
   if (stat(dst_path.c_str(), &dst_comprobacion) == 0) {
     if (S_ISDIR(dst_comprobacion.st_mode)) {
       char* src_file = const_cast<char*>(src_path.c_str());
-      /// copia_dst_path.append("/"); MISMA RAZON DE ANTES
+      if (copia_dst_path[copia_dst_path.size() - 1] != '/') {
+        copia_dst_path.append("/"); 
+      }
       copia_dst_path.append(basename(src_file));
     }
   }
