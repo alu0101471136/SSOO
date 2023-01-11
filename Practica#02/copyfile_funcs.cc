@@ -266,12 +266,27 @@ std::vector<shell::command> parse_line(const std::string& line) {
       std::string cadena_aux;
       cadena_aux += word[word.size() - 1]; 
       word.erase(word.end() - 1);
-      if (word == "") { /// si word esta vacio significa que se ha encontrado | o & unicamente
+      if (word == "") { /// si word esta vacio significa que se ha encontrado | o ; solos
         vector_comandos.push_back(vector_auxiliar);
         vector_auxiliar.clear();
         continue;
       }
       vector_auxiliar.push_back(word);
+      vector_comandos.push_back(vector_auxiliar);
+      vector_auxiliar.clear();
+      continue;
+    } else if (word[word.size() - 1] == '&') {
+      std::string cadena_aux;
+      cadena_aux += word[word.size() - 1]; 
+      word.erase(word.end() - 1);
+      if (word == "") { /// si word esta vacio significa que se ha encontrado & solo
+        vector_auxiliar.push_back(cadena_aux);
+        vector_comandos.push_back(vector_auxiliar);
+        vector_auxiliar.clear();
+        continue;
+      }
+      vector_auxiliar.push_back(word);
+      vector_auxiliar.push_back(cadena_aux);
       vector_comandos.push_back(vector_auxiliar);
       vector_auxiliar.clear();
       continue;
@@ -358,8 +373,12 @@ int mv_command(const std::vector<std::string>& args) {
  */
 int execute(const std::vector<std::string>& args) {
   std::vector<const char*> argv;
-  for (auto& arg : args)
+  for (auto& arg : args) {
+    if (arg == "&") {
+      continue;
+    }
     argv.push_back(arg.c_str());
+  }
   argv.push_back(nullptr);
   int comprobacion_comando = execvp(argv[0], const_cast<char* const*>(argv.data()));
   if (comprobacion_comando < 0) {
